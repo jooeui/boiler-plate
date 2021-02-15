@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 //saltRounds는 salt가 몇 글자인지 나타냄
 const saltRounds = 10
 
+const jwt = require('jsonwebtoken');
+
 const userSchema = mongoose.Schema({
     name: {
         type: String,
@@ -52,9 +54,32 @@ userSchema.pre('save', function(next){
                 next()
             })
         })
+    } else {
+        next()
     }
 })
-    
+
+// comparePassword 메서드 생성
+userSchema.methods.comparePassword = function (plainPassword, cb){    //plainPassword - 입력한 비밀번호
+    bcrypt.compare(plainPassword, this.password, function(err, isMatch){
+        if(err) return cb(err);
+        cb(null, isMatch);
+    })
+}
+
+// generateToken 메서드 생성
+userSchema.methods.generateToken = function(cb){
+    var user = this;
+    // jsonwebtoken을 이용해서 token 생성. 임의로 값을 넣어주면 됨
+    var token = jwt.sign(user._id.toHexString(), 'secretToken')   
+
+    user.token = token
+    user.save(function(err, user){
+        if(err) return cb(err)
+        cb(null, user)
+    })
+}
+
 // mongoose.model('모델 이름', 스키마)
 const User = mongoose.model('User', userSchema)
 
