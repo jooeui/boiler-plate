@@ -4,6 +4,7 @@ const port = 5000
 const bodyParser = require('body-parser');  // 설치했던 body-parser 가져옴
 const cookieParser = require('cookie-parser');  // 설치했던 cookie-parser 가져옴
 const config = require('./config/key');
+const { auth } = require('./middleware/auth')
 const { User } = require("./models/User");  // 생성했던 User 모델을 가져옴
 
 // bodyParser 옵션을 줌
@@ -26,7 +27,7 @@ app.get('/', (req, res) => {
   res.send('안녕하세요!')
 })
 
-app.post('/register', (req, res) => {  //Post 메서드. Route의 end point - register. 콜백 함수 - req, res
+app.post('/api/users/register', (req, res) => {  //Post 메서드. Route의 end point - register. 콜백 함수 - req, res
   //회원가입할 때 필요한 정보들을 client에서 가져오면 그것들을 DB에 넣어줌
   const user = new User(req.body)  //bodyParser를 이용하여 req.body에 클라이언트에 보내는 정보를 받아줌
 
@@ -40,7 +41,7 @@ app.post('/register', (req, res) => {  //Post 메서드. Route의 end point - re
   })
 })
 
-app.post('/login', (req, res) => {
+app.post('/api/users/login', (req, res) => {
   //요청된 이메일을 DB에 있는지 찾음
   User.findOne({email: req.body.email}, (err, userInfo) =>{
     if(!userInfo){
@@ -60,16 +61,39 @@ app.post('/login', (req, res) => {
       userInfo.generateToken((err, userInfo) =>{
         if(err) return res.status(400).send(err);
         
-        // userInfo에 저장되어있는 토큰을 쿠키 or 로컬스토리지에 저장(해당 영상에서는 쿠키에 저장)
+        // userInfo에 저장되어 있는 토큰을 쿠키 or 로컬스토리지에 저장(해당 영상에서는 쿠키에 저장)
         res.cookie("x_auth", userInfo.token)
         .status(200)  // 성공
         .json({ loginSuccess: true, userId: userInfo._id })
       })
     })  
   })
-  
-
 })
+
+app.get('/api/users/auth', auth, (req, res) => {
+  // 여기까지 미들웨어를 통과해왔다는 얘기는 Authentication이 True라는 말
+  res.status(200).json({
+    _id: req.user._id,
+    isAdmin: req.user.role === 0 ? false : true,  // role 0 - 일반유저, 0이 아니면 관리자 (변경 가능)
+    isAuth: true,
+    email: req.user.email,
+    name: req.user.name,
+    lastname: req.user.lastname,
+    role: req.user.role,
+    image: req.user.image
+  })
+})
+
+app.get('/api/users/logout', auth, (req, res) => {
+  // 유저를 찾아서 업데이트
+  User.findOneAndUpdate({ _id: req.user._id }, { token: "" }, (err, user) => {
+    if(err) return res.json({ success: false, err });
+    return res.status(200).send({
+      success: true
+    })
+  }) 
+})
+
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
 })
