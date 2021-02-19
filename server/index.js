@@ -27,6 +27,10 @@ app.get('/', (req, res) => {
   res.send('안녕하세요!')
 })
 
+app.get('/api/hello', (req, res) => {
+  res.send('Hello!')
+})
+
 app.post('/api/users/register', (req, res) => {  //Post 메서드. Route의 end point - register. 콜백 함수 - req, res
   //회원가입할 때 필요한 정보들을 client에서 가져오면 그것들을 DB에 넣어줌
   const user = new User(req.body)  //bodyParser를 이용하여 req.body에 클라이언트에 보내는 정보를 받아줌
